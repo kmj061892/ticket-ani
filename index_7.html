@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>티켓 애니메이션</title>
+<style>
+  body {
+    background-color: rgb(0, 0, 0);
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    position: relative;
+  }
+
+  .ticket {
+    position: relative;
+    width: 80%;
+    max-width: 1000px;
+    aspect-ratio: 5 / 1.5; /* 티켓 비율 */
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* 상단과 하단에 원 모양이 파진 형태 */
+  .ticket::before,
+  .ticket::after {
+    content: '';
+    position: absolute;
+    width: 35px; /* 원 크기 */
+    height: 35px;
+    background-color: black;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .ticket::before {
+    top: -25px; /* 상단 원 */
+    left: 68%;
+    transform: translateX(-50%);
+  }
+
+  .ticket::after {
+    bottom: -25px; /* 하단 원 */
+    left: 68%;
+    transform: translateX(-50%);
+  }
+
+  /* 절취선 세로로 변경 */
+  .dashed-line {
+    position: absolute;
+    top: 0%; /* 절취선 위치 */
+    left: 68%;
+    transform: translateX(-50%); /* 중앙 정렬 */
+    width: 0;
+    height: 100%;
+    border-left: 5px dashed black;
+    z-index: 3;
+  }
+
+  canvas {
+    display: block;
+    width: 100%; 
+    height: 100%;
+  }
+
+  .ticket-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1;
+    color: black;
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+    padding: 20px;
+    pointer-events: none; /* 클릭 방지 */
+  }
+
+  .ticket-header {
+    font-size: 24px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+  }
+
+  .ticket-footer {
+    font-size: 16px;
+  }
+
+  /* 세로로 된 바코드 스타일 */
+  .barcode {
+    position: absolute;
+    bottom: 30px; /* 오른쪽 하단 위치 */
+    right: 20px;
+    width: 30px; /* 바코드의 너비 */
+    height: 150px; /* 바코드의 높이 */
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+  }
+
+  .barcode div {
+    background-color: black; /* 기본 검정색 */
+    width: 100%;
+  }
+
+  /* 다양한 두께의 선 추가 */
+  .barcode .thick {
+    height: 10px; /* 두꺼운 선 */
+  }
+
+  .barcode .medium {
+    height: 6px; /* 중간 두께 선 */
+  }
+
+  .barcode .thin {
+    height: 2px; /* 얇은 선 */
+  }
+
+  .barcode .extra-thick {
+    height: 14px; /* 아주 두꺼운 선 */
+  }
+
+  /* "김치앤칩스 LIGHT BARRIER" 텍스트 스타일 */
+  .left-text, .right-text {
+    font-family: 'Arial', sans-serif; /* 고딕체 (Arial을 예시로 사용) */
+    font-weight: 900; /* 블랙 두께 */
+    color: black; /* 텍스트 색상 */
+    text-transform: uppercase;
+  }
+
+  .left-text {
+    position: absolute;
+    top: 20px; /* 왼쪽 상단 */
+    left: 20px;
+    font-size: 25px;
+  }
+
+  .right-text {
+    position: absolute;
+    top: 27px; /* 오른쪽 상단 */
+    right: 280px;
+    font-size: 20px;
+    transform: rotate(270deg); /* 90도 회전 */
+    transform-origin: top right; /* 회전 기준점 설정 */
+  }
+
+  /* 날짜 텍스트만 있는 박스 */
+  .date-box {
+    position: absolute;
+    bottom: 20px; /* 왼쪽 하단 */
+    left: 400px;
+    font-family: 'Arial', sans-serif;
+    font-size: 25px;
+    color: black;
+    font-weight: bold;
+  }
+
+  /* 기존의 info-box를 없애고, 텍스트만 회전시킴 */
+  .rotated-text {
+    position: absolute;
+    top: 170px;
+    right: 190px;
+    transform: rotate(270deg);
+    transform-origin: top right;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+    color: black;
+    font-weight: bold;
+    text-align: left;
+  }
+
+  .rotated-text p {
+    margin: 0;
+    padding: 2px 0;
+  }
+</style>
+</head>
+<body>
+  <div class="ticket">
+    <canvas id="gridCanvas"></canvas>
+    <div class="dashed-line"></div> <!-- 절취선 추가 -->
+    
+    <!-- 바코드 추가 -->
+    <div class="barcode">
+      <div class="thick"></div>
+      <div class="medium"></div>
+      <div class="thin"></div>
+      <div class="thick"></div>
+      <div class="medium"></div>
+      <div class="thin"></div>
+      <div class="thick"></div>
+      <div class="extra-thick"></div>
+      <div class="medium"></div>
+      <div class="thin"></div>
+      <div class="thick"></div>
+      <div class="medium"></div>
+      <div class="extra-thick"></div>
+      <div class="thin"></div>
+    </div>
+
+    <!-- 타이포 추가 -->
+    <div class="left-text">김치앤칩스 LIGHT BARRIER</div>
+    <div class="right-text">김치앤칩스 LIGHT BARRIER</div>
+
+    <!-- 날짜 텍스트 -->
+    <div class="date-box">2024.12.12.-2024.1.12.</div>
+
+    <!-- 90도 회전한 텍스트 추가 -->
+    <div class="rotated-text">
+      <p>DATE 12/12</p>
+      <p>GATE 1</p>
+      <p>Easy Listening</p>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gridCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    let time = 0;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'black'; // 티켓 배경과 조화를 위해 검정색
+      ctx.lineWidth = 1;
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      // 왼쪽에서 오른쪽으로 3분의 2 영역만 그리도록 축소
+      const scaleFactor = 2 / 3; // 3분의 2 축소
+      ctx.save(); // 현재 상태 저장
+      ctx.scale(scaleFactor, 1); // 가로만 축소
+
+      for (let i = 0; i < 40; i++) { // 티켓 내부 곡선 밀도 조절
+        ctx.beginPath();
+        for (let x = -canvas.width / 2; x < canvas.width / 2; x += 5) {
+          let y = Math.sin(x * 0.03 + i * 0.2 + time) * 30 +
+                  Math.cos(x * 0.02 + i * 0.1 + time * 1.5) * 20;
+          ctx.lineTo(centerX + x, centerY + y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore(); // 이전 상태로 복구
+
+      time += 0.07;
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    window.addEventListener('resize', () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    });
+  </script>
+</body>
+</html>
